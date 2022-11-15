@@ -12,6 +12,8 @@
   "dependencies": {
     "dotenv": "^16.0.3",
     "gql-query-builder": "^3.7.2",
+    "graphql": "^16.6.0",
+    "graphql-request": "^5.0.0",
     "telegraf": "^4.10.0",
     "telegraf-session-local": "^2.1.0"
   }

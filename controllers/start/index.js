@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { Composer, Scenes } = require("telegraf");
+const { Composer, Scenes, Markup } = require("telegraf");
 const gql = require("gql-query-builder");
 
 const { client } = require("../../graphqlConnect");
@@ -17,7 +17,6 @@ const start = new Scenes.WizardScene(
     return ctx.wizard.next();
   },
   async (ctx) => {
-    ctx.session.userPassword = ctx.message.text;
     const { query, variables } = await gql.mutation({
       operation: "tryLogin",
       variables: {
@@ -39,10 +38,19 @@ const start = new Scenes.WizardScene(
 
     try {
       const { tryLogin } = await client.request(query, variables);
-      console.log(tryLogin);
-    } catch (error) {
-      console.log(error.response.errors);
 
+      if (tryLogin["id"]) {
+        await ctx.replyWithHTML(
+          "Вы успешно авторизовались!",
+          Markup.keyboard([
+            [Markup.button.callback("Просмотреть список заказов", "getOrders")],
+          ]).resize()
+        );
+        return ctx.scene.leave();
+      } else {
+        return ctx.replyWithHTML("Неверный логин или пароль");
+      }
+    } catch (error) {
       if (error.response && error.response.errors) {
         const errors = error.response.errors.map((error) => error.message);
         return ctx.replyWithHTML(errors.join("\n"));

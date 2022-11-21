@@ -1,14 +1,16 @@
 require("dotenv").config();
 const { Telegraf, Markup, Scenes } = require("telegraf");
+const fastify = require("fastify");
 
 const LocalSession = require("telegraf-session-local");
 
+const { BOT_TOKEN, WEBHOOK_URL } = process.env;
 const PORT = process.env.PORT || 3000;
 const dev = process.env.NODE_ENV !== "production";
 
 const startScene = require("./controllers/start");
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
+const bot = new Telegraf(BOT_TOKEN);
 
 const stage = new Scenes.Stage([startScene], {
   // default: 'start'
@@ -52,8 +54,48 @@ bot.hears("/quit", async (ctx) => {
   await ctx.leaveChat();
 });
 
+// bot.hears("Просмотреть список заказов", async (ctx) => {
+//   return ctx.replyWithHTML("На стадии разработки");
+// });
+
 bot.command("start", async (ctx) => {
   return ctx.scene.enter("start");
 });
 
-bot.launch();
+const app = fastify({
+  logger: true,
+});
+
+const SECRET_PATH = `/telegraf/${bot.secretPathComponent()}`;
+app.register(telegrafPlugin, { bot, path: SECRET_PATH });
+
+app.post("/api/sendOrderToCourier", async (req, res) => {
+  const { chatIds, order } = req.body;
+
+  const res = [];
+
+  await chatIds.forEach(async (chatId) => {
+    const { message_id } = await bot.telegram.sendMessage(
+      chatId,
+      `Новый заказ №${order.id} на сумму ${order.totalPrice} руб.`
+    );
+    res.push({
+      chatId,
+      messageId: message_id,
+    });
+  });
+  return res.send("OK");
+});
+
+if (dev) {
+  bot.launch();
+} else {
+  if (!WEBHOOK_URL) throw new Error('"WEBHOOK_URL" env var is required!');
+  bot.telegram.setWebhook(WEBHOOK_URL + SECRET_PATH).then(() => {
+    console.log("Webhook is set on", WEBHOOK_URL + SECRET_PATH);
+  });
+
+  app.listen(PORT).then(() => {
+    console.log("Listening on port", PORT);
+  });
+}

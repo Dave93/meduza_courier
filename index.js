@@ -1,6 +1,7 @@
 require("dotenv").config();
 const { Telegraf, Markup, Scenes } = require("telegraf");
 const fastify = require("fastify");
+const telegrafPlugin = require("fastify-telegraf");
 
 const LocalSession = require("telegraf-session-local");
 

@@ -72,14 +72,14 @@ app.register(telegrafPlugin, { bot, path: SECRET_PATH });
 app.post("/api/sendOrderToCourier", async (req, res) => {
   const { chatIds, order } = req.body;
 
-  const res = [];
+  const result = [];
 
   await chatIds.forEach(async (chatId) => {
     const { message_id } = await bot.telegram.sendMessage(
       chatId,
       `Новый заказ №${order.id} на сумму ${order.totalPrice} руб.`
     );
-    res.push({
+    result.push({
       chatId,
       messageId: message_id,
     });

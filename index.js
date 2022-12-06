@@ -2,6 +2,9 @@ require("dotenv").config();
 const { Telegraf, Markup, Scenes } = require("telegraf");
 const fastify = require("fastify");
 const telegrafPlugin = require("fastify-telegraf");
+const gql = require("gql-query-builder");
+
+const { client } = require("./graphqlConnect");
 
 const LocalSession = require("telegraf-session-local");
 
@@ -10,6 +13,14 @@ const PORT = process.env.PORT || 3000;
 const dev = process.env.NODE_ENV !== "production";
 
 const startScene = require("./controllers/start");
+const dayjs = require("dayjs");
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+dayjs.tz.setDefault('Asia/Tashkent');
 
 const bot = new Telegraf(BOT_TOKEN);
 
@@ -68,24 +79,109 @@ const app = fastify({
 });
 
 const SECRET_PATH = `/telegraf/${bot.secretPathComponent()}`;
+
+let paymentTypes = {
+  cash: "Наличные",
+  card: "Карта"
+}
+
 app.register(telegrafPlugin, { bot, path: SECRET_PATH });
 
 app.post("/api/sendOrderToCourier", async (req, res) => {
+    console.log('send is came');
   const { chatIds, order } = req.body;
 
   const result = [];
 
-  await chatIds.forEach(async (chatId) => {
+  for (let i = 0; i < chatIds.length; i++) {
+    const chatId = chatIds[i];
+
+    let message = `<b>Новый заказ №${order.id}</b>\n<b>Время заказа:</b> ${dayjs(order.delivery_time).tz('Asia/Tashkent').format("DD.MM.YYYY HH:mm:ss")}\n<b>Адрес:</b> ${order.delivery_address}\n<b>Сумма заказа:</b> ${new Intl.NumberFormat("ru").format(order.order_price)} сум.\n<b>Способ оплаты:</b> ${paymentTypes[order.payment_type]}\n<b>Список товаров:</b>\n`;
+
+    order.order_items_orders.forEach((item) => {
+        message += `   ${item.order_items_products.name} - ${item.quantity} шт.\n`;
+    });
+
     const { message_id } = await bot.telegram.sendMessage(
       chatId,
-      `Новый заказ №${order.id} на сумму ${order.totalPrice} руб.`
+        message,
+        {
+            parse_mode: "HTML",
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        {
+                            text: "Подтвердить заказ",
+                            callback_data: `confirmOrder/${order.id}`,
+                        }
+                        ]
+                    ]
+
+            }
+        }
     );
+
     result.push({
       chatId,
       messageId: message_id,
     });
-  });
-  return res.send("OK");
+
+    const { message_id: location_id } = await bot.telegram.sendLocation(
+        chatId,
+        order.to_lat,
+        order.to_lon
+    );
+
+    result.push({
+        chatId,
+        messageId: location_id,
+    });
+  }
+  return res.send(result);
+});
+
+app.post('/api/deleteMessages', async (req, res) => {
+    const { chats } = req.body;
+
+    if (chats.length > 0) {
+        for (let i = 0; i < chats.length; i++) {
+            const { chatId, messageId } = chats[i];
+            console.log('delete message', [chatId, messageId]);
+
+            await bot.telegram.deleteMessage(chatId, messageId);
+        }
+    }
+
+    return res.send('ok');
+});
+
+bot.action(/confirmOrder\/(.+)/, async (ctx) => {
+    const orderId = ctx.match[1];
+    console.log(ctx);
+    const { query, variables } = await gql.mutation({
+        operation: "approveOrder",
+        variables: {
+            orderId: {
+                value: +orderId,
+                type: "Int",
+                required: true,
+            },
+            tgId: {
+                value: +ctx.update.callback_query.from.id,
+                type: "Int",
+                required: true,
+            },
+        },
+        fields: ["id"],
+    });
+
+    try {
+        const { approveOrder } = await client.request(query, variables);
+
+        console.log(approveOrder);
+    } catch (e) {
+        console.log(e);
+    }
 });
 
 if (dev) {

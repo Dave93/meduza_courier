@@ -78,7 +78,7 @@ app.post("/api/sendOrderToCourier", async (req, res) => {
   await chatIds.forEach(async (chatId) => {
     const { message_id } = await bot.telegram.sendMessage(
       chatId,
-      `Новый заказ №${order.id} на сумму ${order.totalPrice} руб.`
+      `Новый заказ №${order.id} на сумму ${order.totalPrice} сум.`
     );
     result.push({
       chatId,

@@ -113,32 +113,36 @@ app.post("/api/sendOrderToCourier", async (req, res) => {
       message += `   ${item.order_items_products.name} - ${item.quantity} шт.\n`;
     });
 
-    const { message_id } = await bot.telegram.sendMessage(chatId, message, {
-      parse_mode: "HTML",
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: "Комментарии",
-              web_app: {
-                url: `${process.env.WEB_LINK}/comments/?order_id=${order.id}&sign=${sign}`,
+    try {
+      const { message_id } = await bot.telegram.sendMessage(chatId, message, {
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "Комментарии",
+                web_app: {
+                  url: `${process.env.WEB_LINK}/comments/?order_id=${order.id}&sign=${sign}`,
+                },
               },
-            },
+            ],
+            [
+              {
+                text: "Подтвердить заказ",
+                callback_data: `confirmOrder/${order.id}`,
+              },
+            ],
           ],
-          [
-            {
-              text: "Подтвердить заказ",
-              callback_data: `confirmOrder/${order.id}`,
-            },
-          ],
-        ],
-      },
-    });
+        },
+      });
 
-    result.push({
-      chatId,
-      messageId: message_id,
-    });
+      result.push({
+        chatId,
+        messageId: message_id,
+      });
+    } catch (error) {
+      console.log(error);
+    }
 
     const { message_id: location_id } = await bot.telegram.sendLocation(
       chatId,

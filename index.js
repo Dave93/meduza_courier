@@ -200,6 +200,19 @@ app.post("/api/deleteMessages", async (req, res) => {
   return res.send("ok");
 });
 
+app.post("/api/updateMessage", async (req, res) => {
+  const { chatId, messageId, text, markup } = req.body;
+
+  await bot.telegram.editMessageText(chatId, messageId, null, text, {
+    parse_mode: "HTML",
+    reply_markup: {
+      inline_keyboard: markup,
+    },
+  });
+
+  return res.send("ok");
+});
+
 bot.action(/confirmOrder\/(.+)\/(.+)/, async (ctx) => {
   const orderId = ctx.match[1];
   const phone = ctx.match[2];
@@ -212,6 +225,7 @@ bot.action(/confirmOrder\/(.+)\/(.+)/, async (ctx) => {
   const sign = hex;
   ctx.session.sign = sign;
   console.log(ctx);
+  const messageId = ctx.update.callback_query.message.message_id;
   const { query, variables } = await gql.mutation({
     operation: "approveOrder",
     variables: {
@@ -223,6 +237,11 @@ bot.action(/confirmOrder\/(.+)\/(.+)/, async (ctx) => {
       sign: {
         value: sign,
         type: "String",
+        required: true,
+      },
+      messageId: {
+        value: messageId,
+        type: "Int",
         required: true,
       },
     },

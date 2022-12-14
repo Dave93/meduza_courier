@@ -129,7 +129,7 @@ app.post("/api/sendOrderToCourier", async (req, res) => {
             [
               {
                 text: "Подтвердить заказ",
-                callback_data: `confirmOrder/${order.id}`,
+                callback_data: `confirmOrder/${order.id}/${sign}`,
               },
             ],
           ],
@@ -173,8 +173,9 @@ app.post("/api/deleteMessages", async (req, res) => {
   return res.send("ok");
 });
 
-bot.action(/confirmOrder\/(.+)/, async (ctx) => {
+bot.action(/confirmOrder\/(.+)\/(.+)/, async (ctx) => {
   const orderId = ctx.match[1];
+  const sign = ctx.match[2];
   console.log(ctx);
   const { query, variables } = await gql.mutation({
     operation: "approveOrder",
@@ -184,9 +185,9 @@ bot.action(/confirmOrder\/(.+)/, async (ctx) => {
         type: "Int",
         required: true,
       },
-      tgId: {
-        value: +ctx.update.callback_query.from.id,
-        type: "Int",
+      sign: {
+        value: sign,
+        type: "String",
         required: true,
       },
     },

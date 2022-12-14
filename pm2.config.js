@@ -14,6 +14,7 @@ module.exports = {
         WEBHOOK_URL: "https://courierbot.meduza-carwash.uz",
         TELEGRAM_TOKEN: "5463442210:AAGwAXHfrTLVjD8dF8bivf--Ckte6uowNq0",
         GRAPHQL_API_URL: "https://api.meduza-carwash.uz/graphql",
+	WEB_LINK: "https://webapp.meduza-carwash.uz"
       },
     },
   ],

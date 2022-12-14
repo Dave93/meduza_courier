@@ -128,12 +128,20 @@ app.post("/api/sendOrderToCourier", async (req, res) => {
             [
               {
                 text: "Подтвердить заказ",
-                callback_data: `confirmOrder/${order.id}/${sign}`,
+                callback_data: `confirmOrder/${order.id}`,
               },
             ],
           ],
         })
       );
+      const buff = Buffer.from(sign, "hex");
+      const text = buff.toString("utf-8");
+      const randomString = text.substring(0, 6);
+      const base64data = text.substring(6);
+      const buff2 = Buffer.from(base64data, "base64");
+      const text2 = buff2.toString("utf-8");
+      const phone = text2.split("|")[0];
+      const tgId = text2.split("|")[1];
       const { message_id } = await bot.telegram.sendMessage(chatId, message, {
         parse_mode: "HTML",
         reply_markup: {
@@ -149,7 +157,7 @@ app.post("/api/sendOrderToCourier", async (req, res) => {
             [
               {
                 text: "Подтвердить заказ",
-                callback_data: `confirmOrder/${order.id}/${sign}`,
+                callback_data: `confirmOrder/${order.id}/${phone}`,
               },
             ],
           ],
@@ -194,8 +202,16 @@ app.post("/api/deleteMessages", async (req, res) => {
 
 bot.action(/confirmOrder\/(.+)\/(.+)/, async (ctx) => {
   const orderId = ctx.match[1];
-  const sign = ctx.match[2];
-  console.log(ctx);
+  const phone = ctx.match[2];
+  const buff = Buffer.from(`${phone}|${ctx.from.id}`);
+  const base64data = buff.toString("base64");
+  // random string with 6 characters
+  const randomString = Math.random().toString(36).substring(2, 8);
+  const hexBuffer = Buffer.from(`${randomString}${base64data}`);
+  const hex = hexBuffer.toString("hex");
+  const sign = hex;
+  ctx.session.sign = sign;
+  console.log(ctx.session);
   const { query, variables } = await gql.mutation({
     operation: "approveOrder",
     variables: {

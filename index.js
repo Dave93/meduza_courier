@@ -114,6 +114,26 @@ app.post("/api/sendOrderToCourier", async (req, res) => {
     });
 
     try {
+      console.log(
+        JSON.stringify({
+          inline_keyboard: [
+            [
+              {
+                text: "Комментарии",
+                web_app: {
+                  url: `${process.env.WEB_LINK}/comments/?order_id=${order.id}&sign=${sign}`,
+                },
+              },
+            ],
+            [
+              {
+                text: "Подтвердить заказ",
+                callback_data: `confirmOrder/${order.id}/${sign}`,
+              },
+            ],
+          ],
+        })
+      );
       const { message_id } = await bot.telegram.sendMessage(chatId, message, {
         parse_mode: "HTML",
         reply_markup: {
@@ -135,26 +155,6 @@ app.post("/api/sendOrderToCourier", async (req, res) => {
           ],
         },
       });
-      console.log(
-        JSON.stringify({
-          inline_keyboard: [
-            [
-              {
-                text: "Комментарии",
-                web_app: {
-                  url: `${process.env.WEB_LINK}/comments/?order_id=${order.id}&sign=${sign}`,
-                },
-              },
-            ],
-            [
-              {
-                text: "Подтвердить заказ",
-                callback_data: `confirmOrder/${order.id}/${sign}`,
-              },
-            ],
-          ],
-        })
-      );
       result.push({
         chatId,
         messageId: message_id,

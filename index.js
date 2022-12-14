@@ -211,7 +211,7 @@ bot.action(/confirmOrder\/(.+)\/(.+)/, async (ctx) => {
   const hex = hexBuffer.toString("hex");
   const sign = hex;
   ctx.session.sign = sign;
-  console.log(ctx.session);
+  console.log(ctx.message);
   const { query, variables } = await gql.mutation({
     operation: "approveOrder",
     variables: {
